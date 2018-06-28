@@ -1,10 +1,12 @@
 name:                fromhtml
 version:             0.1.0.0
 github:              "MarekSuchanek/FromHTML"
-license:             BSD3
+license:             MIT
 author:              "Marek Suchánek"
 maintainer:          "marek.suchanek@fit.cvut.cz"
 copyright:           "2018 Marek Suchánek"
+category:            "Text"
+synopsis:            "Simple library for transformation of HTML to other formats"
 
 extra-source-files:
 - README.md

@@ -1,4 +1,16 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-|
+Module      : Text.FromHTML
+Description : Simple library for transformation of HTML to other formats
+Copyright   : (c) Marek Suchánek, 2018
+License     : MIT
+Maintainer  : marek.suchanek@fit.cvut.cz
+Stability   : experimental
+Portability : POSIX
+
+Simplified API for transformation of HTML to other formats with Pandoc
+and wkhtmltopdf in Haskell code. It requires @wkhtmltopdf@ installed
+locally (see <https://wkhtmltopdf.org wkhtmltopdf.org>).
+-}
 module Text.FromHTML
    ( fromHTML
    , ExportType(..)
@@ -20,11 +32,43 @@ import           GHC.IO.Handle
 import           System.Process
 import           System.IO.Unsafe
 
+-- | Allowed export types
+data ExportType = HTML
+        | LaTeX
+        | RTF
+        | RST
+        | Markdown
+        | AsciiDoc
+        | Docx
+        | ODT
+        | DokuWiki
+        | MediaWiki
+        | EPUB2
+        | EPUB3
+        | PDF
+        deriving (Show, Read, Enum, Bounded, Eq)
+
+-- | Type alias for Pure Pandoc writer
+type Writer = (Pandoc.WriterOptions -> Pandoc.Pandoc -> Pandoc.PandocPure B.ByteString)
+
+
+-- | Helper function to translate Either to Maybe
+eitherToMaybe :: Show a => Either a b -> Maybe b
+eitherToMaybe (Right x) = Just x
+eitherToMaybe _ = Nothing
+
+-- Variant for debugging
+-- eitherToMaybe :: Show a => Either a b -> Maybe b
+-- eitherToMaybe (Right x) = Just x
+-- eitherToMaybe (Left x) = traceShow x Nothing
+
 -- | Transform given HTML as String to selected format
 fromHTML :: ExportType -> String -> Maybe B.ByteString
 fromHTML HTML html = Just . E.encodeUtf8 . T.pack $ html  -- HTML is already provided!
 fromHTML PDF html = writerHTML2PDF html
-fromHTML extp html = runOnPD (\d pd -> Pandoc.runPure $ actwriter d pd) (html2pd html)
+fromHTML extp html = case html2pd html of
+                       Just pd -> eitherToMaybe . Pandoc.runPure $ actwriter Pandoc.def pd
+                       Nothing -> Nothing
   where actwriter = writer extp
 
 html2pd :: String -> Maybe Pandoc.Pandoc
@@ -53,39 +97,6 @@ html2pdf html = do
                        }
         opts = ["--quiet", "--encoding", "utf-8", "-", "-"]
         cprocess = procWith $ proc "wkhtmltopdf" opts
-
-
-
-runOnPD f (Just pd) = eitherToMaybe (f Pandoc.def pd)
-runOnPD _ Nothing   = Nothing
-
-
-data ExportType = HTML
-                | LaTeX
-                | RTF
-                | RST
-                | Markdown
-                | AsciiDoc
-                | Docx
-                | ODT
-                | DokuWiki
-                | MediaWiki
-                | EPUB2
-                | EPUB3
-                | PDF
-                deriving (Show, Read, Enum, Bounded, Eq)
-
-type Writer = (Pandoc.WriterOptions -> Pandoc.Pandoc -> Pandoc.PandocPure B.ByteString)
-
--- | Helper function to translate Either to Maybe
-eitherToMaybe :: Show a => Either a b -> Maybe b
-eitherToMaybe (Right x) = Just x
-eitherToMaybe _ = Nothing
-
--- Variant for debugging
--- eitherToMaybe :: Show a => Either a b -> Maybe b
--- eitherToMaybe (Right x) = Just x
--- eitherToMaybe (Left x) = traceShow x Nothing
 
 -- | Select Writer based on given ExportType
 writer :: ExportType -> Writer
