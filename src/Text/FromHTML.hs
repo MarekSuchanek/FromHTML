@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Text.FromHTML where
---    ( fromHTML
---    , ExportType(..)
---    ) where
+module Text.FromHTML
+   ( fromHTML
+   , ExportType(..)
+   ) where
 
 -- import Debug.Trace
 
@@ -16,12 +16,14 @@ import qualified Text.Pandoc.Writers as PandocWriters
 import qualified Text.Pandoc.Error as PandocError
 import qualified Text.Pandoc.PDF as PandocPDF
 
+import           GHC.IO.Handle
+import           System.Process
 import           System.IO.Unsafe
 
 -- | Transform given HTML as String to selected format
 fromHTML :: ExportType -> String -> Maybe B.ByteString
 fromHTML HTML html = Just . E.encodeUtf8 . T.pack $ html  -- HTML is already provided!
-fromHTML PDF html = runOnPD writerHTML2PDF (html2pd html)
+fromHTML PDF html = writerHTML2PDF html
 fromHTML extp html = runOnPD (\d pd -> Pandoc.runPure $ actwriter d pd) (html2pd html)
   where actwriter = writer extp
 
@@ -29,11 +31,30 @@ html2pd :: String -> Maybe Pandoc.Pandoc
 html2pd html = eitherToMaybe . Pandoc.runPure $ Pandoc.readHtml Pandoc.def (T.pack html)
 
 -- | Ugly PDF writer from HTML
-writerHTML2PDF opts pd = fixError . unsafePerformIO . Pandoc.runIO $ PandocPDF.makePDF "wkhtmltopdf" ["--quiet"] PandocWriters.writeHtml5String opts pd
-  where
-    fixError (Left pderr) = Left pderr
-    fixError (Right (Left bserr)) = Left . PandocError.PandocSomeError . T.unpack . E.decodeUtf8 . BL.toStrict $ bserr
-    fixError (Right (Right x)) = Right (BL.toStrict x)
+-- writerHTML2PDF opts pd = fixError . unsafePerformIO . Pandoc.runIO $ PandocPDF.makePDF "wkhtmltopdf" ["--quiet"] PandocWriters.writeHtml5String opts pd
+--   where
+--     fixError (Left pderr) = Left pderr
+--     fixError (Right (Left bserr)) = Left . PandocError.PandocSomeError . T.unpack . E.decodeUtf8 . BL.toStrict $ bserr
+--     fixError (Right (Right x)) = Right (BL.toStrict x)
+
+-- | Wrapping HTML to PDF conversion which is unsafe
+writerHTML2PDF :: String -> Maybe B.ByteString
+writerHTML2PDF = Just . unsafePerformIO . html2pdf
+
+-- | Simple conversion of HTML to PDF using process wkhtmltopdf
+html2pdf :: String -> IO B.ByteString
+html2pdf html = do
+    (Just stdin, Just stdout, _, _) <- createProcess cprocess
+    hPutStr stdin html >> hClose stdin
+    B.hGetContents stdout
+    where
+        procWith p = p { std_out = CreatePipe
+                       , std_in  = CreatePipe
+                       }
+        opts = ["--quiet", "--encoding", "utf-8", "-", "-"]
+        cprocess = procWith $ proc "wkhtmltopdf" opts
+
+
 
 runOnPD f (Just pd) = eitherToMaybe (f Pandoc.def pd)
 runOnPD _ Nothing   = Nothing
