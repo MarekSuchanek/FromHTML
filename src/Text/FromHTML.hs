@@ -24,6 +24,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 
 import qualified Text.Pandoc as Pandoc
+import qualified Text.Pandoc.Templates as PandocTemplates
 import qualified Text.Pandoc.Writers as PandocWriters
 import qualified Text.Pandoc.Error as PandocError
 import qualified Text.Pandoc.PDF as PandocPDF
@@ -62,17 +63,43 @@ eitherToMaybe _ = Nothing
 -- eitherToMaybe (Right x) = Just x
 -- eitherToMaybe (Left x) = traceShow x Nothing
 
+readerOptions = Pandoc.def { Pandoc.readerStandalone = True }
+writerOptions = Pandoc.def
+
 -- | Transform given HTML as String to selected format
 fromHTML :: ExportType -> String -> Maybe B.ByteString
 fromHTML HTML html = Just . E.encodeUtf8 . T.pack $ html  -- HTML is already provided!
 fromHTML PDF html = writerHTML2PDF html
 fromHTML extp html = case html2pd html of
-                       Just pd -> eitherToMaybe . Pandoc.runPure $ actwriter Pandoc.def pd
+                       Just pd -> eitherToMaybe . Pandoc.runPure $ runWriter extp pd
                        Nothing -> Nothing
-  where actwriter = writer extp
+
+
+runWriter :: ExportType -> Pandoc.Pandoc -> Pandoc.PandocPure B.ByteString
+runWriter extp pd = do
+  template <- getTemplate extp
+  let opts = writerOptions { Pandoc.writerTemplate = template }
+  writer extp opts pd
+
+
+getTemplate :: ExportType -> Pandoc.PandocPure (Maybe String)
+getTemplate HTML = Just <$> PandocTemplates.getDefaultTemplate "html5"
+getTemplate LaTeX = Just <$> PandocTemplates.getDefaultTemplate "latex"
+getTemplate RTF = Just <$> PandocTemplates.getDefaultTemplate "rtf"
+getTemplate RST = Just <$> PandocTemplates.getDefaultTemplate "rst"
+getTemplate Markdown = Just <$> PandocTemplates.getDefaultTemplate "markdown"
+getTemplate AsciiDoc = Just <$> PandocTemplates.getDefaultTemplate ""
+getTemplate Docx = Just <$> PandocTemplates.getDefaultTemplate "docx"
+getTemplate ODT = Just <$> PandocTemplates.getDefaultTemplate "odt"
+getTemplate DokuWiki = Just <$> PandocTemplates.getDefaultTemplate "dokuwiki"
+getTemplate MediaWiki = Just <$> PandocTemplates.getDefaultTemplate "mediawiki"
+getTemplate EPUB2 = Just <$> PandocTemplates.getDefaultTemplate "epub2"
+getTemplate EPUB3 = Just <$> PandocTemplates.getDefaultTemplate "epub3"
+getTemplate _   = return Nothing
+
 
 html2pd :: String -> Maybe Pandoc.Pandoc
-html2pd html = eitherToMaybe . Pandoc.runPure $ Pandoc.readHtml Pandoc.def (T.pack html)
+html2pd html = eitherToMaybe . Pandoc.runPure $ Pandoc.readHtml readerOptions (T.pack html)
 
 -- | Ugly PDF writer from HTML
 -- writerHTML2PDF opts pd = fixError . unsafePerformIO . Pandoc.runIO $ PandocPDF.makePDF "wkhtmltopdf" ["--quiet"] PandocWriters.writeHtml5String opts pd
