@@ -1,12 +1,12 @@
 name:                fromhtml
-version:             0.1.0.1
+version:             0.1.0.2
 github:              "MarekSuchanek/FromHTML"
 license:             MIT
 author:              "Marek Suchánek"
 maintainer:          "marek.suchanek@fit.cvut.cz"
 copyright:           "2018 Marek Suchánek"
 category:            "Text"
-synopsis:            "Simple library for transformation of HTML to other formats"
+synopsis:            "Simple adapter for transformation of HTML to other formats"
 
 extra-source-files:
 - README.md
@@ -24,7 +24,6 @@ description:         Please see the README on GitHub at <https://github.com/Mare
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
-- pandoc >= 2.2
 - process
 - text
 
