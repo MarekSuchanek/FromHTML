@@ -3,6 +3,8 @@ module Main where
 import Prelude hiding (writeFile)
 import Data.ByteString (writeFile)
 import System.Environment
+import System.Exit
+
 import Text.FromHTML
 
 main :: IO ()
@@ -14,4 +16,6 @@ main = do
   html <- readFile infile
   case fromHTML format html of
     Just bs -> writeFile outfile bs
-    Nothing -> putStrLn "Couldn't transform that document..."
+    Nothing -> do
+      putStrLn "Couldn't transform that document..."
+      exitFailure
