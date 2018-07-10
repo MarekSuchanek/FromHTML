@@ -1,6 +1,4 @@
-# https://docs.haskellstack.org/en/stable/travis_ci/
-sudo: false
-# Not Haskell with cabal but with stack tool
+sudo: true
 language: c
 cache:
   directories:
