@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>My First Heading</h1>
+
+<p>My first paragraph.</p>
+
+<h2>Link</h2>
+
+<a href="https://www.w3schools.com">This is a link</a>
+
+<h2>List</h2>
+
+<ul>
+  <li>Coffee</li>
+  <li>Tea</li>
+  <li>Milk</li>
+</ul>
+
+<h2>Code</h2>
+
+<pre>
+perform :: CreateProcess -> Input -> IO (Maybe Output)
+perform cprocess input = do
+    (Just stdin, Just stdout, _, p) <- createProcess cprocess
+    hPutStr stdin input >> hClose stdin
+    exitCode <- waitForProcess p
+    case exitCode of
+      ExitSuccess -> Just <$> B.hGetContents stdout
+      _           -> return Nothing
+</pre>
+
+</body>
+</html>
