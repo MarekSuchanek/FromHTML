@@ -16,7 +16,7 @@ module Text.FromHTML
    , ExportType(..)
    ) where
 
--- import Debug.Trace
+import Debug.Trace
 
 import qualified Data.Char as C
 import qualified Data.Text as T
@@ -24,6 +24,7 @@ import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as B
 
 import           GHC.IO.Handle
+import           System.Exit
 import           System.Process
 import           System.IO.Unsafe
 
@@ -60,10 +61,10 @@ str2BS = E.encodeUtf8 . T.pack
 -- | Transform given HTML as String to selected format
 fromHTML :: ExportType -> String -> Maybe B.ByteString
 fromHTML HTML html = Just . str2BS $ html  -- HTML is already provided!
-fromHTML PDF html = makePDF (str2BS html)
-fromHTML extp html = makePD extp (str2BS html)
+fromHTML PDF html = makePDF html
+fromHTML extp html = makePD extp html
 
-type Input = B.ByteString
+type Input = String
 type Output = B.ByteString
 type Command = Input -> IO (Maybe Output)
 type Process = IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
@@ -92,12 +93,12 @@ pandoc expt = perform cprocess
 
 perform :: CreateProcess -> Input -> IO (Maybe Output)
 perform cprocess input = do
-    (Just stdin, Just stdout, Just stderr, _) <- createProcess cprocess
-    B.hPutStr stdin input >> hClose stdin
-    errors <- B.hGetContents stderr
-    case errors of
-      "" -> Just <$> B.hGetContents stdout
-      _  -> return Nothing
+    (Just stdin, Just stdout, _, p) <- createProcess cprocess
+    hPutStr stdin input >> hClose stdin
+    exitCode <- waitForProcess p
+    case exitCode of
+      ExitSuccess -> Just <$> B.hGetContents stdout
+      _           -> return Nothing
 
 
 procWith p = p { std_out = CreatePipe
