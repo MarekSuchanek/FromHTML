@@ -1,5 +1,5 @@
 name:                fromhtml
-version:             0.1.0.2
+version:             0.1.0.3
 github:              "MarekSuchanek/FromHTML"
 license:             MIT
 author:              "Marek Suchánek"
@@ -36,16 +36,5 @@ executables:
   fromhtml:
     main: Main.hs
     source-dirs: app
-    dependencies:
-    - fromhtml
-
-tests:
-  transdoc-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
     dependencies:
     - fromhtml
