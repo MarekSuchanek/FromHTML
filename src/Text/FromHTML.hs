@@ -16,7 +16,7 @@ module Text.FromHTML
    , ExportType(..)
    ) where
 
-import Debug.Trace
+--import Debug.Trace
 
 import qualified Data.Char as C
 import qualified Data.Text as T
