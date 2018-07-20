@@ -61,29 +61,35 @@ str2BS = E.encodeUtf8 . T.pack
 -- | Transform given HTML as String to selected format
 fromHTML :: ExportType -> String -> Maybe B.ByteString
 fromHTML HTML html = Just . str2BS $ html  -- HTML is already provided!
-fromHTML PDF html = makePDF html
-fromHTML extp html = makePD extp html
+fromHTML PDF html = handleMaker $ makePDF html
+fromHTML extp html = handleMaker $ makePD extp html
+
 
 type Input = String
 type Output = B.ByteString
-type Command = Input -> IO (Maybe Output)
+type Command = Input -> IO (Either Output Output)
 type Process = IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
-makePDF :: Input -> Maybe Output
+
+handleMaker :: Either Output Output -> Maybe B.ByteString
+handleMaker (Right x) = Just x
+handleMaker _ = Nothing
+
+makePDF :: Input -> Either Output Output
 makePDF html = unsafePerformIO $ wkhtmltopdf html
 
-makePD :: ExportType -> Input -> Maybe Output
+makePD :: ExportType -> Input -> Either Output Output
 makePD expt html = unsafePerformIO $ pandoc expt html
 
 -- | Simple conversion of HTML to PDF using process wkhtmltopdf
-wkhtmltopdf :: Input -> IO (Maybe Output)
+wkhtmltopdf :: Command
 wkhtmltopdf = perform cprocess
     where
         opts = ["--quiet", "--encoding", "utf-8", "-", "-"]
         cprocess = procWith $ proc "wkhtmltopdf" opts
 
 -- | Simple conversion of HTML to PDF using process wkhtmltopdf
-pandoc :: ExportType -> Input -> IO (Maybe Output)
+pandoc :: ExportType -> Command
 pandoc expt = perform cprocess
     where
         format = exportType2PD expt
@@ -91,14 +97,14 @@ pandoc expt = perform cprocess
         cprocess = procWith $ proc "pandoc" opts
 
 
-perform :: CreateProcess -> Input -> IO (Maybe Output)
+perform :: CreateProcess -> Command
 perform cprocess input = do
-    (Just stdin, Just stdout, _, p) <- createProcess cprocess
+    (Just stdin, Just stdout, Just stderr, p) <- createProcess cprocess
     hPutStr stdin input >> hClose stdin
     exitCode <- waitForProcess p
     case exitCode of
-      ExitSuccess -> Just <$> B.hGetContents stdout
-      _           -> return Nothing
+      ExitSuccess -> Right <$> B.hGetContents stdout
+      _           -> Left <$> B.hGetContents stderr
 
 
 procWith p = p { std_out = CreatePipe
