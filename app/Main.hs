@@ -1,9 +1,10 @@
 module Main where
 
-import Prelude hiding (writeFile)
-import Data.ByteString (writeFile)
-import System.Environment
-import System.Exit
+import           Prelude
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as C
+import           System.Environment
+import           System.Exit
 
 import Text.FromHTML
 
@@ -15,7 +16,8 @@ main = do
   let format = (read $ args !! 2) :: ExportType
   html <- readFile infile
   case fromHTML format html of
-    Just bs -> writeFile outfile bs
-    Nothing -> do
-      putStrLn "Couldn't transform that document..."
+    Right res -> B.writeFile outfile res
+    Left err -> do
+      putStrLn "Couldn't transform that document:"
+      C.putStrLn err
       exitFailure

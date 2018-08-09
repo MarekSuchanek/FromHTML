@@ -45,31 +45,19 @@ data ExportType = HTML
                 | PDF
                 deriving (Show, Read, Enum, Bounded, Eq)
 
-
--- | Helper function to translate Either to Maybe
-eitherToMaybe :: Show a => Either a b -> Maybe b
-eitherToMaybe (Right x) = Just x
-eitherToMaybe _ = Nothing
-
-str2BS :: String -> B.ByteString
-str2BS = E.encodeUtf8 . T.pack
-
--- | Transform given HTML as String to selected format
-fromHTML :: ExportType -> String -> Maybe B.ByteString
-fromHTML HTML html = Just . str2BS $ html  -- HTML is already provided!
-fromHTML PDF html = handleMaker $ makePDF html
-fromHTML extp html = handleMaker $ makePD extp html
-
-
 type Input = String
 type Output = B.ByteString
 type Command = Input -> IO (Either Output Output)
 type Process = IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 
+str2BS :: String -> B.ByteString
+str2BS = E.encodeUtf8 . T.pack
 
-handleMaker :: Either Output Output -> Maybe B.ByteString
-handleMaker (Right x) = Just x
-handleMaker _ = Nothing
+-- | Transform given HTML as String to selected format
+fromHTML :: ExportType -> String -> Either Output Output
+fromHTML HTML html = Right . str2BS $ html  -- HTML is already provided!
+fromHTML PDF html = makePDF html
+fromHTML extp html = makePD extp html
 
 makePDF :: Input -> Either Output Output
 makePDF html = unsafePerformIO $ wkhtmltopdf html
