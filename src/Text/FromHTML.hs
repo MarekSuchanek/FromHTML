@@ -16,14 +16,15 @@ module Text.FromHTML
    , ExportType(..)
    ) where
 
---import Debug.Trace
-
 import qualified Data.Char as C
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as E
 import qualified Data.ByteString as B
 
+import           Control.Exception
+import           Data.Semigroup
 import           GHC.IO.Handle
+import           GHC.IO.Encoding
 import           System.Exit
 import           System.Process
 import           System.IO.Unsafe
@@ -49,11 +50,6 @@ data ExportType = HTML
 eitherToMaybe :: Show a => Either a b -> Maybe b
 eitherToMaybe (Right x) = Just x
 eitherToMaybe _ = Nothing
-
--- Variant for debugging
--- eitherToMaybe :: Show a => Either a b -> Maybe b
--- eitherToMaybe (Right x) = Just x
--- eitherToMaybe (Left x) = traceShow x Nothing
 
 str2BS :: String -> B.ByteString
 str2BS = E.encodeUtf8 . T.pack
@@ -88,7 +84,7 @@ wkhtmltopdf = perform cprocess
         opts = ["--quiet", "--encoding", "utf-8", "-", "-"]
         cprocess = procWith $ proc "wkhtmltopdf" opts
 
--- | Simple conversion of HTML to PDF using process wkhtmltopdf
+-- | Simple conversion of HTML to some format using process pandoc
 pandoc :: ExportType -> Command
 pandoc expt = perform cprocess
     where
@@ -96,16 +92,24 @@ pandoc expt = perform cprocess
         opts = ["-s", "-f", "html", "-t", format, "-o", "-"]
         cprocess = procWith $ proc "pandoc" opts
 
-
+-- | Perform process (catched IOException)
 perform :: CreateProcess -> Command
-perform cprocess input = do
+perform cprocess input = catch (performUnsafe cprocess input)
+        (\e -> do let err = show (e :: IOException)
+                  return . Left $ "IOException: " <> str2BS err)
+
+-- | Perform process (no caching exceptions)
+performUnsafe :: CreateProcess -> Command
+performUnsafe cprocess input = do
+    setLocaleEncoding utf8  -- don't know what was locales are there...
     (Just stdin, Just stdout, Just stderr, p) <- createProcess cprocess
     hPutStr stdin input >> hClose stdin
     exitCode <- waitForProcess p
+    errors <- B.hGetContents stderr
+    output <- B.hGetContents stdout
     case exitCode of
-      ExitSuccess -> Right <$> B.hGetContents stdout
-      _           -> Left <$> B.hGetContents stderr
-
+      ExitSuccess -> return $ Right output
+      _           -> return . Left $ "Exit(" <> str2BS (show exitCode) <> "): " <> errors
 
 procWith p = p { std_out = CreatePipe
                , std_in  = CreatePipe
