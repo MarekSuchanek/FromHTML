@@ -15,7 +15,8 @@ main = do
   let outfile = args !! 1
   let format = (read $ args !! 2) :: ExportType
   html <- readFile infile
-  case fromHTML format html of
+  result <- fromHTML format html
+  case result of
     Right res -> B.writeFile outfile res
     Left err -> do
       putStrLn "Couldn't transform that document:"

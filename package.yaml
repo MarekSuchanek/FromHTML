@@ -1,5 +1,5 @@
 name:                fromhtml
-version:             1.0.0
+version:             1.0.1
 github:              "MarekSuchanek/FromHTML"
 license:             MIT
 author:              "Marek Suchánek"
@@ -24,11 +24,12 @@ description:         Please see the README on GitHub at <https://github.com/Mare
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
-- process
+- process-extras
 - text
 
 library:
   source-dirs: src
+  ghc-options: -fwarn-unused-imports
   default-extensions:
   - OverloadedStrings
 
