@@ -58,7 +58,7 @@ fromHTML extp html = pandoc extp (str2BS html)
 -- | Simple conversion of HTML to PDF using process wkhtmltopdf
 wkhtmltopdf :: Command
 wkhtmltopdf = perform "wkhtmltopdf" ["--quiet", "--disable-smart-shrinking",
-                                     "--footer-center", "\"[page]\"", 
+                                     "--footer-center", "[page]", 
                                      "--footer-font-name", "\"Noto Serif\"", 
                                      "--footer-spacing", "10", 
                                      "--footer-font-size", "10", 
